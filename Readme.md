@@ -44,7 +44,7 @@ Chess² is a graphical chess interface built using Python, `tkinter`, and the `c
 1. **Run the Application**:  
    Start the application by running the Python script:
    ```bash
-   python mains.py
+   python main.py
    ```
 
 2. **Play Chess**:  

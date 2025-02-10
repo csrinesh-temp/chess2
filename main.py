@@ -95,7 +95,7 @@ class ChessApp:
 
             # Draw the eval bar as a white background
             self.eval_bar.create_rectangle(
-                1, 1, 99, self.sq_size * 8 - 1, outline='', fill='blue', tags="background"
+                1, 1, 99, self.sq_size * 8 - 1, outline='', fill='#6666FF', tags="background"
             )
 
             # Draw the eval score as a black rectangle inside the border

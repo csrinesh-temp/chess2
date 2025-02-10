@@ -19,6 +19,8 @@ class ChessApp:
         self.eval_label.pack()
         self.reset_button = Button(root, text="Reset Board", command=self.reset_board)
         self.reset_button.pack()
+        self.confirm_button = Button(root, text="Confirm Turn", command=self.confirm_turn)
+        self.confirm_button.pack()
         self.selected_square = None
         self.piece_images = {}
         self.load_images()
@@ -26,6 +28,9 @@ class ChessApp:
         self.engine = chess.engine.SimpleEngine.popen_uci("/usr/local/bin/stockfish")
         self.analysis_depth = 15
         self.game_over = False
+        self.move_count = 0
+        self.moves_per_turn = 2
+        self.current_turn_moves = 0
 
     def load_images(self):
         pieces = ['K', 'Q', 'R', 'B', 'N', 'P', 'k', 'q', 'r', 'b', 'n', 'p']
@@ -68,20 +73,25 @@ class ChessApp:
                 self.selected_square = clicked_square
         else:
             move = chess.Move(self.selected_square, clicked_square)
-            if move in self.board.legal_moves:
+            if self.is_legal_move(move):
                 self.board.push(move)
+                self.current_turn_moves += 1
                 self.selected_square = None
                 self.update_pieces()
                 self.update_eval_bar()
+
                 if self.board.is_checkmate():
                     self.eval_label.config(text="CHECKMATE!")
                     self.game_over = True
                     self.drop_confetti()
                 elif self.board.is_stalemate():
-                    self.eval_label.config(text="STATEMATE!")
+                    self.eval_label.config(text="STALEMATE!")
                     self.game_over = True
             else:
                 self.selected_square = None
+
+    def is_legal_move(self, move):
+        return move in self.board.legal_moves
 
     def update_eval_bar(self):
         self.eval_bar.delete("border")
@@ -108,10 +118,21 @@ class ChessApp:
                 1, eval_y, 99, self.sq_size * 8 - 1, outline='', fill='black', tags="eval"
             )
 
+    def confirm_turn(self):
+        if self.current_turn_moves >= self.moves_per_turn:
+            self.board.turn = not self.board.turn
+        self.current_turn_moves = 0
+        self.evaluate_position()
+
+    def evaluate_position(self):
+        info = self.engine.analyse(self.board, chess.engine.Limit(depth=self.analysis_depth))
+        score = info["score"].relative.score(mate_score=10000)
+        text = f"Score: {score / 100:.2f}" if score is not None else "Evaluating..."
+        self.eval_label.config(text=text)
+
     def initialize_eval_bar(self):
         self.eval_bar.delete("border")
         self.eval_bar.delete("eval")
-
         self.eval_bar.create_rectangle(
             0, 0, 100, self.sq_size * 8, outline='black', tags="border"
         )
@@ -132,6 +153,8 @@ class ChessApp:
         self.eval_label.config(text="")
         self.game_over = False
         self.remove_confetti()
+        self.move_count = 0
+        self.current_turn_moves = 0
 
     def drop_confetti(self):
         self.confetti_particles = []

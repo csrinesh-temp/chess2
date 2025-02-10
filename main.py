@@ -1,3 +1,4 @@
+import random
 import os
 import tkinter as tk
 from tkinter import Canvas, PhotoImage, Label, Button
@@ -24,6 +25,7 @@ class ChessApp:
         self.create_board()
         self.engine = chess.engine.SimpleEngine.popen_uci("/usr/local/bin/stockfish")
         self.analysis_depth = 15
+        self.game_over = False
 
     def load_images(self):
         pieces = ['K', 'Q', 'R', 'B', 'N', 'P', 'k', 'q', 'r', 'b', 'n', 'p']
@@ -41,7 +43,6 @@ class ChessApp:
                                              (col + 1) * self.sq_size, (row + 1) * self.sq_size, fill=color)
 
         self.update_pieces()
-        # Initialize the eval bar to start at the halfway position
         self.initialize_eval_bar()
         self.canvas.bind("<Button-1>", self.on_click)
 
@@ -55,6 +56,9 @@ class ChessApp:
             self.canvas.create_image(x + self.sq_size // 2, y + self.sq_size // 2, image=image, tags="piece")
 
     def on_click(self, event):
+        if self.game_over:
+            return
+
         col = event.x // self.sq_size
         row = 7 - (event.y // self.sq_size)
         clicked_square = chess.square(col, row)
@@ -62,24 +66,27 @@ class ChessApp:
         if self.selected_square is None:
             if self.board.piece_at(clicked_square) is not None:
                 self.selected_square = clicked_square
-                print(f"Selected: {chess.square_name(clicked_square)}")
         else:
             move = chess.Move(self.selected_square, clicked_square)
             if move in self.board.legal_moves:
                 self.board.push(move)
-                print(f"Moved from {chess.square_name(self.selected_square)} to {chess.square_name(clicked_square)}")
                 self.selected_square = None
                 self.update_pieces()
                 self.update_eval_bar()
+                if self.board.is_checkmate():
+                    self.eval_label.config(text="Checkmate!")
+                    self.game_over = True
+                    self.drop_confetti()
+                elif self.board.is_stalemate():
+                    self.eval_label.config(text="Stalemate!")
+                    self.game_over = True
             else:
-                print(f"Invalid move from {chess.square_name(self.selected_square)} to {chess.square_name(clicked_square)}")
                 self.selected_square = None
 
     def update_eval_bar(self):
         self.eval_bar.delete("border")
         self.eval_bar.delete("eval")
-        
-        # Draw the border as a black rectangle completely around the eval area
+
         self.eval_bar.create_rectangle(
             0, 0, 100, self.sq_size * 8, outline='black', tags="border"
         )
@@ -93,30 +100,26 @@ class ChessApp:
             eval_score = max(-max_eval * 100, min(max_eval * 100, score))
             eval_y = mid_position - (eval_score / (max_eval * 100) * mid_position)
 
-            # Draw the eval bar as a white background
             self.eval_bar.create_rectangle(
                 1, 1, 99, self.sq_size * 8 - 1, outline='', fill='#6666FF', tags="background"
             )
 
-            # Draw the eval score as a black rectangle inside the border
             self.eval_bar.create_rectangle(
                 1, eval_y, 99, self.sq_size * 8 - 1, outline='', fill='black', tags="eval"
             )
+
     def initialize_eval_bar(self):
         self.eval_bar.delete("border")
         self.eval_bar.delete("eval")
 
-        # Draw the border as a black rectangle completely around the eval area
         self.eval_bar.create_rectangle(
             0, 0, 100, self.sq_size * 8, outline='black', tags="border"
         )
-        
-        # Draw the eval bar as a white background
+
         self.eval_bar.create_rectangle(
             1, 1, 99, self.sq_size * 8 - 1, outline='', fill='#6666FF', tags="background"
         )
-        
-        # Draw the eval score as a black rectangle inside the border to start midway
+
         mid_position = self.sq_size * 4
         self.eval_bar.create_rectangle(
             1, mid_position, 99, self.sq_size * 8 - 1, outline='', fill='black', tags="eval"
@@ -125,8 +128,40 @@ class ChessApp:
     def reset_board(self):
         self.board.reset()
         self.update_pieces()
+        self.initialize_eval_bar()
         self.eval_label.config(text="")
-        self.eval_bar.delete("eval")
+        self.game_over = False
+        self.remove_confetti()
+
+    def drop_confetti(self):
+        self.confetti_particles = []
+        for _ in range(100):
+            x = random.randint(0, self.sq_size * 8)
+            y = random.randint(-80, 0)
+            dx = random.uniform(-1, 1)
+            dy = random.uniform(2, 5)
+            color = random.choice(['red', 'blue', 'green', 'yellow', 'purple', 'orange'])
+            particle = {
+                'rectangle': self.canvas.create_rectangle(x, y, x+4, y+4, fill=color, outline=''),
+                'dx': dx,
+                'dy': dy
+            }
+            self.confetti_particles.append(particle)
+        self.animate_confetti()
+
+    def animate_confetti(self):
+        for particle in self.confetti_particles:
+            self.canvas.move(particle['rectangle'], particle['dx'], particle['dy'])
+            pos = self.canvas.coords(particle['rectangle'])
+            if pos[3] > self.sq_size * 8:
+                self.canvas.moveto(particle['rectangle'], random.randint(0, self.sq_size * 8), random.randint(-80, 0))
+        if self.game_over:
+            self.root.after(50, self.animate_confetti)
+
+    def remove_confetti(self):
+        for particle in self.confetti_particles:
+            self.canvas.delete(particle['rectangle'])
+        self.confetti_particles = []
 
     def __del__(self):
         self.engine.quit()

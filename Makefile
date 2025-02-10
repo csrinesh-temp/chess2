@@ -1,0 +1,2 @@
+getfish:
+	brew install stockfish

@@ -74,11 +74,11 @@ class ChessApp:
                 self.update_pieces()
                 self.update_eval_bar()
                 if self.board.is_checkmate():
-                    self.eval_label.config(text="Checkmate!")
+                    self.eval_label.config(text="CHECKMATE!")
                     self.game_over = True
                     self.drop_confetti()
                 elif self.board.is_stalemate():
-                    self.eval_label.config(text="Stalemate!")
+                    self.eval_label.config(text="STATEMATE!")
                     self.game_over = True
             else:
                 self.selected_square = None

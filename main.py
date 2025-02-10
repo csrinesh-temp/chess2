@@ -41,6 +41,8 @@ class ChessApp:
                                              (col + 1) * self.sq_size, (row + 1) * self.sq_size, fill=color)
 
         self.update_pieces()
+        # Initialize the eval bar to start at the halfway position
+        self.initialize_eval_bar()
         self.canvas.bind("<Button-1>", self.on_click)
 
     def update_pieces(self):
@@ -74,16 +76,51 @@ class ChessApp:
                 self.selected_square = None
 
     def update_eval_bar(self):
+        self.eval_bar.delete("border")
         self.eval_bar.delete("eval")
+        
+        # Draw the border as a black rectangle completely around the eval area
+        self.eval_bar.create_rectangle(
+            0, 0, 100, self.sq_size * 8, outline='black', tags="border"
+        )
+
         info = self.engine.analyse(self.board, chess.engine.Limit(depth=self.analysis_depth))
         score = info["score"].relative.score(mate_score=10000)
+
         if score is not None:
-            self.eval_label.config(text=f"Score: {score} centipawns")
             mid_position = self.sq_size * 4
             max_eval = 20
             eval_score = max(-max_eval * 100, min(max_eval * 100, score))
             eval_y = mid_position - (eval_score / (max_eval * 100) * mid_position)
-            self.eval_bar.create_rectangle(0, eval_y, 100, self.sq_size*8, fill='black', tags="eval")
+
+            # Draw the eval bar as a white background
+            self.eval_bar.create_rectangle(
+                1, 1, 99, self.sq_size * 8 - 1, outline='', fill='blue', tags="background"
+            )
+
+            # Draw the eval score as a black rectangle inside the border
+            self.eval_bar.create_rectangle(
+                1, eval_y, 99, self.sq_size * 8 - 1, outline='', fill='black', tags="eval"
+            )
+    def initialize_eval_bar(self):
+        self.eval_bar.delete("border")
+        self.eval_bar.delete("eval")
+
+        # Draw the border as a black rectangle completely around the eval area
+        self.eval_bar.create_rectangle(
+            0, 0, 100, self.sq_size * 8, outline='black', tags="border"
+        )
+        
+        # Draw the eval bar as a white background
+        self.eval_bar.create_rectangle(
+            1, 1, 99, self.sq_size * 8 - 1, outline='', fill='#6666FF', tags="background"
+        )
+        
+        # Draw the eval score as a black rectangle inside the border to start midway
+        mid_position = self.sq_size * 4
+        self.eval_bar.create_rectangle(
+            1, mid_position, 99, self.sq_size * 8 - 1, outline='', fill='black', tags="eval"
+        )
 
     def reset_board(self):
         self.board.reset()
